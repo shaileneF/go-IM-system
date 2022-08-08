@@ -1,10 +1,11 @@
-package bean
+package models
 
 import (
 	"fmt"
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -55,7 +56,7 @@ func (server *Server) Handler(conn net.Conn) {
 	//用户上线，将用户加入到onlineMap中
 	user := NewUser(conn, server)
 	user.Online()
-
+	isLive := make(chan bool)
 	go func() {
 		buf := make([]byte, 4096)
 		for {
@@ -74,8 +75,26 @@ func (server *Server) Handler(conn net.Conn) {
 			msg := string(buf[:n-1])
 			// 用户针对msg进行处理
 			user.DoMessage(msg)
+			// 用户的任何消息，代表当前用户是活跃的
+			isLive <- true
 		}
 	}()
+	for {
+		select {
+		case <-isLive: //当前用户是活跃的，重置定时器
+
+		// 如果触发了10s超时
+		case <-time.After(time.Second * 10):
+			//超时-将当前的user强制关闭
+			user.SendMsg("你被T了")
+			//销毁用的资源
+			close(user.C)
+			//关闭连接
+			conn.Close()
+			//退出当前Handler
+			return
+		}
+	}
 	select {}
 }
 

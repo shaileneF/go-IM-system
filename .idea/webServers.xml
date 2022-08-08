@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="1a19a3dc-071c-4e2b-b69a-5df198e21438" name="IM-system" url="http://192.168.15.106">
+        <fileTransfer accessType="SFTP" host="192.168.15.106" port="22" sshConfigId="49fb2c3b-1058-474b-b340-d0341591d209" sshConfig="root@192.168.15.106:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
