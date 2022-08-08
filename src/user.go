@@ -7,20 +7,22 @@ import "net"
 // 可以看到在构造方法中，这个c是无缓冲的，说明协程一直监听这个c，若获取不到消息，则会一直阻塞在这里，直到获取到消息
 // 对于无缓冲的channel，接收方会阻塞，直到发送方准备好，发送方会阻塞，直到接收方准备好。
 type User struct {
-	Name string
-	Addr string
-	C    chan string // 这个信道用来接收消息
-	conn net.Conn
+	Name   string
+	Addr   string
+	C      chan string // 这个信道用来接收消息
+	conn   net.Conn
+	server *Server // 当前用户是属于哪个server的
 }
 
 // 构造方法
-func NewUser(conn net.Conn) *User {
+func NewUser(conn net.Conn, server *Server) *User {
 	userAddr := conn.RemoteAddr().String()
 	user := new(User)
 	user.Name = userAddr
 	user.Addr = userAddr
 	user.C = make(chan string)
 	user.conn = conn
+	user.server = server
 	// 启动监听当前user channel消息的goroutine
 	go user.ListenMessage()
 	return user
@@ -33,4 +35,29 @@ func (user *User) ListenMessage() {
 		msg := <-user.C
 		user.conn.Write([]byte(msg + "\n"))
 	}
+}
+
+// 用户的上线业务
+func (user *User) Online() {
+	//用户上线，将用户加入到onlineMap中
+	user.server.mapLock.Lock()
+	user.server.OnlineMap[user.Name] = user
+	user.server.mapLock.Unlock()
+	// 广播当前用户上线消息
+	user.server.BroadCast(user, "已上线")
+}
+
+// 用户的下线业务
+func (user *User) Offline() {
+	//用户下线，将用户从onlineMap中删除
+	user.server.mapLock.Lock()
+	delete(user.server.OnlineMap, user.Name)
+	user.server.mapLock.Unlock()
+	// 广播当前用户上线消息
+	user.server.BroadCast(user, "下线")
+}
+
+//用户处理消息的业务
+func (user *User) DoMessage(msg string) {
+	user.server.BroadCast(user, msg)
 }

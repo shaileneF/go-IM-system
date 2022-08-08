@@ -48,16 +48,13 @@ func (server *Server) ListenMessage() {
 		server.mapLock.Unlock()
 	}
 }
+
 func (server *Server) Handler(conn net.Conn) {
 	//业务
 	fmt.Println("接收到客户端的连接请求", conn)
 	//用户上线，将用户加入到onlineMap中
-	user := NewUser(conn)
-	server.mapLock.Lock()
-	server.OnlineMap[user.Name] = user
-	server.mapLock.Unlock()
-	// 广播当前用户上线消息
-	server.BroadCast(user, "已上线")
+	user := NewUser(conn, server)
+	user.Online()
 
 	go func() {
 		buf := make([]byte, 4096)
@@ -66,7 +63,7 @@ func (server *Server) Handler(conn net.Conn) {
 			// n是读到的字节数
 			n, err := conn.Read(buf)
 			if n == 0 {
-				server.BroadCast(user, "下线")
+				user.Offline()
 				return
 			}
 			if err != nil && err != io.EOF {
@@ -75,8 +72,8 @@ func (server *Server) Handler(conn net.Conn) {
 			}
 			// 提取用户的消息(去除'\n')
 			msg := string(buf[:n-1])
-			// 将得到的消息进行广播
-			server.BroadCast(user, msg)
+			// 用户针对msg进行处理
+			user.DoMessage(msg)
 		}
 	}()
 	select {}
