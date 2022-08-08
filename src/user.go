@@ -3,6 +3,7 @@ package bean
 import (
 	"fmt"
 	"net"
+	"strings"
 )
 
 // 每个user都会启动一个goroutine，不断监控这个channel，这个channel用于传递消息
@@ -79,6 +80,21 @@ func (user *User) DoMessage(msg string) {
 			user.SendMsg(onlineMsg)
 		}
 		user.server.mapLock.Unlock()
+	} else if len(msg) > 7 && msg[:7] == "rename|" {
+		newName := strings.Split(msg, "|")[1]
+		// 判断newName是否存在
+		_, isPresent := user.server.OnlineMap[newName]
+		if isPresent {
+			user.SendMsg("当前用户名被使用\n")
+		} else {
+			user.server.mapLock.Lock()
+			delete(user.server.OnlineMap, user.Name)
+			user.server.OnlineMap[newName] = user
+			user.server.mapLock.Unlock()
+
+			user.Name = newName
+			user.SendMsg("您的用户名更新成功:" + user.Name + "\n")
+		}
 	} else {
 		user.server.BroadCast(user, msg)
 	}
