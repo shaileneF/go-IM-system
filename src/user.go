@@ -1,6 +1,9 @@
 package bean
 
-import "net"
+import (
+	"fmt"
+	"net"
+)
 
 // 每个user都会启动一个goroutine，不断监控这个channel，这个channel用于传递消息
 // 若监控到这个c里面有消息了，便进行之后的业务处理
@@ -57,7 +60,26 @@ func (user *User) Offline() {
 	user.server.BroadCast(user, "下线")
 }
 
+// 给当前User对应的客户端发消息
+//在此方法中的user，是Java中的this,是指的当前对象，也就是调用此方法的对象。
+// 也就是谁调用的此方法，就发给谁
+func (user *User) SendMsg(msg string) {
+	user.conn.Write([]byte(msg))
+}
+
 //用户处理消息的业务
 func (user *User) DoMessage(msg string) {
-	user.server.BroadCast(user, msg)
+	if msg == "who" {
+		// 查询当前用户都有哪些
+		user.server.mapLock.Lock()
+		fmt.Println(user.server.OnlineMap)
+		for _, u := range user.server.OnlineMap {
+			onlineMsg := "[" + u.Addr + "]" + u.Name + ": " + "在线\n"
+			// 这里的user是调用sendMsg方法的对象，那么在sendMsg方法中的user，则是Java中的
+			user.SendMsg(onlineMsg)
+		}
+		user.server.mapLock.Unlock()
+	} else {
+		user.server.BroadCast(user, msg)
+	}
 }
