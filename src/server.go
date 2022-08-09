@@ -79,12 +79,13 @@ func (server *Server) Handler(conn net.Conn) {
 			isLive <- true
 		}
 	}()
+	// 监听以下两个管道
 	for {
 		select {
 		case <-isLive: //当前用户是活跃的，重置定时器
 
 		// 如果触发了10s超时
-		case <-time.After(time.Second * 10):
+		case <-time.After(time.Second * 600):
 			//超时-将当前的user强制关闭
 			user.SendMsg("你被T了")
 			//销毁用的资源
